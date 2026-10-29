@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>vanillabp/renovate-config"
+  ],
+  "timezone": "Europe/Vienna",
+  "packageRules": [
+    {
+      "description": "VanillaBP, the Business Cockpit and the BPMS adapters follow the framework, not Renovate: their versions are bumped when a release is cut, and while they are snapshots there is nothing to look up.",
+      "matchPackageNames": ["/^io\\.vanillabp/", "/^org\\.camunda\\.community\\.vanillabp/"],
+      "enabled": false
+    },
+    {
+      "description": "The CIB seven version is written by the recipe of the sync, together with the version of the CIB seven adapter, so a change on main would meet the next sync. Camunda is only in the test which runs next to Camunda 7, through the Camunda 7 adapter.",
+      "matchPackageNames": ["/^org\\.cibseven/", "/^io\\.camunda/", "/^org\\.camunda\\.bpm/"],
+      "enabled": false
+    }
+  ]
+}
