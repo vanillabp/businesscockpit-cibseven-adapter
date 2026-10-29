@@ -1,0 +1,291 @@
+# How the Business Cockpit extension for CIB seven is made from the extension for Camunda 7.
+#
+# bin/sync-from-camunda7.sh runs this recipe over a copy of the Camunda 7 extension. CIB seven
+# is Camunda 7 with other names, so a rename does all of the work. Two kinds of names change:
+#
+#   - the names of the engine: the Java package 'org.camunda.bpm' and the Maven coordinates
+#     of the engine jar.
+#   - VanillaBP's own names: the CIB seven adapter the extension plugs into, the Java package
+#     and the classes of the extension, the artifacts and the names in strings. Without them
+#     this extension could not sit next to the Camunda 7 extension in one application, and
+#     that side-by-side setup is how an application moves from Camunda 7 to CIB seven.
+#
+# CIB seven publishes a recipe of its own, 'org.cibseven.ReplaceCamundaWithCIBSeven'. It is
+# not used, for the same reason the CIB seven adapter does not use it: it renames every
+# 'org.camunda', so it would also rename the groupId 'org.camunda.community.vanillabp' of the
+# Camunda 7 adapter.
+#
+# What stays as it is: the BPMN namespace 'http://camunda.org/schema/1.0/bpmn' and every
+# 'camunda:' attribute, because CIB seven reads only that namespace.
+#
+# Every text rule is case sensitive. A rule which is not would turn 'camunda7' into
+# 'CibSeven' as well.
+#
+# The recipes run in the order they are listed. The type renames come first, because they
+# name the classes by their old package. The text rules come last, because they also see
+# what the Java recipes left behind. A text rule turns a file into plain text, and no Java or
+# XML recipe sees that file afterwards.
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.cibseven.FromCamunda7
+displayName: The Business Cockpit extension for CIB seven, made from the extension for Camunda 7
+description: Renames the engine's packages and artifacts, and VanillaBP's adapter, Java package, classes and names in strings.
+recipeList:
+  # One entry per class whose name contains 'Camunda7'. Do not edit the lines between the two
+  # markers by hand: bin/write-type-renames.sh writes them from the sources.
+  # BEGIN type renames, written by bin/write-type-renames.sh
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7BusinessCases
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenBusinessCases
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitBridge
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenCockpitBridge
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitCustomizer
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenCockpitCustomizer
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitEvents
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenCockpitEvents
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7CockpitWiring
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenCockpitWiring
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7EventBeingReported
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenEventBeingReported
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7Scope
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenScope
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7UserTaskListener
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenUserTaskListener
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7UserTaskParseListener
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenUserTaskParseListener
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7WorkflowHistoryHandler
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenWorkflowHistoryHandler
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7WorkflowProcesses
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenWorkflowProcesses
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.Camunda7BusinessCasesTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.CibSevenBusinessCasesTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.Camunda7CockpitEventsTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.CibSevenCockpitEventsTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.Camunda7EngineCustomizingTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.CibSevenEngineCustomizingTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.Camunda7PrefillAtTheEventTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.test.CibSevenPrefillAtTheEventTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.deployment.Camunda7CockpitProcessor
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.deployment.CibSevenCockpitProcessor
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7BpmsStartedWorkflowTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.CibSevenBpmsStartedWorkflowTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7BridgeOfAPrioritizedAdapterTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.CibSevenBridgeOfAPrioritizedAdapterTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7CockpitTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.CibSevenCockpitTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7OwnDataSourceTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.CibSevenOwnDataSourceTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7ProcessVersionTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.CibSevenProcessVersionTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.Camunda7UnclaimedProcessesTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.it.CibSevenUnclaimedProcessesTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.Camunda7CockpitProducer
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.quarkus.CibSevenCockpitProducer
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.Camunda7CockpitAutoConfiguration
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.CibSevenCockpitAutoConfiguration
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.Camunda7CockpitBeanRegistrar
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.CibSevenCockpitBeanRegistrar
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7BpmsStartedWorkflowTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenBpmsStartedWorkflowTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7CalledProcessCaseTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenCalledProcessCaseTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7CockpitTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenCockpitTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7HistoryActivityTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenHistoryActivityTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7ModuleTenantTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenModuleTenantTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7ProcessVersionTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenProcessVersionTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7TwoAdapterIdsTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenTwoAdapterIdsTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7UnclaimedProcessesTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenUnclaimedProcessesTest
+  - org.openrewrite.java.ChangeType:
+      oldFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.Camunda7UsePrefixTest
+      newFullyQualifiedTypeName: io.vanillabp.cockpit.camunda7.springboot.test.CibSevenUsePrefixTest
+  # END type renames
+  - org.openrewrite.java.ChangePackage:
+      oldPackageName: io.vanillabp.cockpit.camunda7
+      newPackageName: io.vanillabp.cockpit.cibseven
+      recursive: true
+  - io.vanillabp.cockpit.cibseven.CibSevenVersion
+  - io.vanillabp.cockpit.cibseven.EngineNames
+  - io.vanillabp.cockpit.cibseven.Camunda7NamesInText
+  - io.vanillabp.cockpit.cibseven.DecisionsOfTheCamunda7Extension
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.cibseven.CibSevenVersion
+displayName: The CIB seven version, and the version of the CIB seven adapter
+description: >-
+  The Camunda 7 extension pins Camunda in the property 'camunda.version'. This extension pins
+  the CIB seven version the CIB seven adapter pins, in a property of the same name the adapter
+  uses. The adapter carries the CIB seven minor in its own version, so the extension asks for
+  that version.
+recipeList:
+  # The CIB seven minor of the CIB seven adapter. A new minor is raised here and in the
+  # adapter version below together, when the adapter raises it.
+  - org.openrewrite.text.FindAndReplace:
+      find: '<camunda.version>[^<]*</camunda.version>'
+      replace: '<cibseven.version>2.2.0</cibseven.version>'
+      caseSensitive: true
+      regex: true
+      filePattern: pom.xml
+  - org.openrewrite.text.FindAndReplace:
+      find: '(\$\{)camunda\.version\}'
+      replace: '$1cibseven.version}'
+      caseSensitive: true
+      regex: true
+      filePattern: 'pom.xml;**/pom.xml'
+  # The adapter's version is '<VanillaBP version>-<CIB seven minor>', for instance
+  # '2.0.0-2.2-SNAPSHOT'. This runs before the rule 'camunda7' -> 'cibseven' below.
+  - org.openrewrite.text.FindAndReplace:
+      find: '<camunda7-adapter.version>(\d+\.\d+\.\d+)(-SNAPSHOT)?</camunda7-adapter.version>'
+      replace: '<camunda7-adapter.version>$1-2.2$2</camunda7-adapter.version>'
+      caseSensitive: true
+      regex: true
+      filePattern: pom.xml
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.cibseven.EngineNames
+displayName: The names of the engine
+description: CIB seven renamed every package of Camunda 7 and every jar.
+recipeList:
+  # The extension elements of the model API ('CamundaIn', 'CamundaProperties', ...) live in
+  # 'instance.cibseven' since CIB seven 2.0. Their class names and getters stay. The extension
+  # does not use them today. The rule waits for the day it does, and it comes before the
+  # general one, which would leave 'instance.camunda' behind.
+  - org.openrewrite.text.FindAndReplace:
+      find: org.camunda.bpm.model.bpmn.instance.camunda
+      replace: org.cibseven.bpm.model.bpmn.instance.cibseven
+      caseSensitive: true
+  # The packages, and with them the groupId 'org.camunda.bpm'.
+  - org.openrewrite.text.FindAndReplace:
+      find: org.camunda.bpm
+      replace: org.cibseven.bpm
+      caseSensitive: true
+  - org.openrewrite.text.FindAndReplace:
+      find: '\bcamunda-engine\b'
+      replace: cibseven-engine
+      caseSensitive: true
+      regex: true
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.cibseven.Camunda7NamesInText
+displayName: VanillaBP's names in strings, comments, resources and imports
+description: >-
+  What no Java recipe of this file sees. Strings, comments, POMs, YAML, properties, service
+  files and the imports of the CIB seven adapter's classes.
+recipeList:
+  # The repository of the Camunda 7 adapter first, before 'camunda7' below turns it into a
+  # name nobody uses.
+  - org.openrewrite.text.FindAndReplace:
+      find: camunda-community-hub/vanillabp-camunda7-adapter
+      replace: vanillabp/cibseven-adapter
+      caseSensitive: true
+  # The groupId of the Camunda 7 adapter. The Camunda Community Hub owns
+  # 'org.camunda.community', and the CIB seven adapter is published as 'io.vanillabp'.
+  - org.openrewrite.text.FindAndReplace:
+      find: org.camunda.community.vanillabp
+      replace: io.vanillabp
+      caseSensitive: true
+  # Class names. The CIB seven adapter names its classes the way this rule does, so
+  # 'io.vanillabp.camunda7.api.Camunda7EngineFacts' becomes
+  # 'io.vanillabp.cibseven.api.CibSevenEngineFacts' together with the rule below. These
+  # classes are not in the sources of this repository, so no type rename above can see them.
+  # Also the names of nested classes, the log prefixes and the class names in resources.
+  - org.openrewrite.text.FindAndReplace:
+      find: Camunda7
+      replace: CibSeven
+      caseSensitive: true
+  - org.openrewrite.text.FindAndReplace:
+      find: CAMUNDA7
+      replace: CIBSEVEN
+      caseSensitive: true
+  # The packages of the adapter, the artifactIds of the adapter and of this extension, the
+  # adapter type and the name of the Quarkus extension.
+  - org.openrewrite.text.FindAndReplace:
+      find: camunda7
+      replace: cibseven
+      caseSensitive: true
+  # Javadoc, comments, messages and the names of the Maven modules. A version number stays as
+  # it is: 'Camunda 7.24' is a fact about Camunda. So does what is said about the forks of
+  # Camunda 7 and its family, and the name of the log a decision is cited from, which the last
+  # recipe of this file writes. Without that exception a second run of the recipe would turn
+  # it into 'CIB seven extension's'.
+  - org.openrewrite.text.FindAndReplace:
+      find: '(?<!fork of |forks of )Camunda 7(?!\.\d|\d| forks?\b| family\b|\s+(?:\*|//|#)?\s*(?:adapter|extension)''s\s+(?:\*|//|#)?\s*(?:\{@code )?DECISIONS)'
+      replace: CIB seven
+      caseSensitive: true
+      regex: true
+  # 'Camunda' alone means the engine the extension listens to: 'the version Camunda counted',
+  # 'a Camunda tenant', 'Camunda's levels'. A name with a number stays, such as 'Camunda 8'
+  # and what the rule above kept of 'Camunda 7'. So does the Camunda Community Hub.
+  - org.openrewrite.text.FindAndReplace:
+      find: '\bCamunda\b(?!\s*\d| Community)'
+      replace: CIB seven
+      caseSensitive: true
+      regex: true
+---
+type: specs.openrewrite.org/v1beta/recipe
+name: io.vanillabp.cockpit.cibseven.DecisionsOfTheCamunda7Extension
+displayName: The decisions the code cites are those of the Camunda 7 extension
+description: >-
+  A citation 'see decision 3 in the repository's DECISIONS.md' in the generated code means
+  decision 3 of the Camunda 7 extension. This repository numbers its own decisions, so the
+  citation names the log it points at.
+recipeList:
+  # The phrase may be wrapped over two lines of a comment, with '*', '//' or '#' in front of
+  # the second line.
+  - org.openrewrite.text.FindAndReplace:
+      find: '([Dd]ecisions?\s+(?:\*|//|#)?\s*\d{1,3}(?:(?:,|,? and| or)\s+(?:\*|//|#)?\s*\d{1,3})*\s+(?:\*|//|#)?\s*in\s+(?:\*|//|#)?\s*the\s+(?:\*|//|#)?\s*)repository''s(?=\s+(?:\*|//|#)?\s*(?:\{@code )?DECISIONS\.md)'
+      replace: $1Camunda 7 extension's
+      caseSensitive: true
+      regex: true
+      filePattern: '**/*.java;**/pom.xml;**/*.yaml;**/*.properties;**/*.json'
+  # The same for the form 'decision 3 in the DECISIONS.md of this repository'.
+  - org.openrewrite.text.FindAndReplace:
+      find: '([Dd]ecisions?\s+(?:\*|//|#)?\s*\d{1,3}\s+(?:\*|//|#)?\s*in\s+(?:\*|//|#)?\s*the\s+(?:\*|//|#)?\s*)DECISIONS\.md\s+(?:\*|//|#)?\s*of\s+(?:\*|//|#)?\s*this\s+(?:\*|//|#)?\s*repository'
+      replace: $1Camunda 7 extension's DECISIONS.md
+      caseSensitive: true
+      regex: true
+      filePattern: '**/*.java;**/pom.xml;**/*.yaml;**/*.properties;**/*.json'
+  # The same for the shorter form 'decision 3 of DECISIONS.md'.
+  - org.openrewrite.text.FindAndReplace:
+      find: '([Dd]ecisions?\s+(?:\*|//|#)?\s*\d{1,3}\s+(?:\*|//|#)?\s*of\s+(?:\*|//|#)?\s*)(\{@code )?DECISIONS\.md'
+      replace: $1the Camunda 7 extension's $2DECISIONS.md
+      caseSensitive: true
+      regex: true
+      filePattern: '**/*.java;**/pom.xml;**/*.yaml;**/*.properties;**/*.json'

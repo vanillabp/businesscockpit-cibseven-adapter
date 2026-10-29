@@ -1,0 +1,4 @@
+name: vanillabp-business-cockpit-cibseven
+artifact: "${project.groupId}:${project.artifactId}:${project.version}"
+dependencies:
+  - vanillabp

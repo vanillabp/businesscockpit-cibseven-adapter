@@ -1,0 +1,156 @@
+package io.vanillabp.cockpit.cibseven.quarkus;
+
+import java.util.List;
+
+import org.cibseven.bpm.model.bpmn.BpmnModelInstance;
+
+import io.quarkus.arc.Unremovable;
+import io.vanillabp.cibseven.CibSevenAdapter;
+import io.vanillabp.cibseven.CibSevenProcessingContext;
+import io.vanillabp.cibseven.api.CibSevenEngineFacts;
+import io.vanillabp.cibseven.quarkus.runtime.CibSevenQuarkusEngineRegistry;
+import io.vanillabp.cockpit.cibseven.CibSevenCockpitBridge;
+import io.vanillabp.cockpit.cibseven.CibSevenCockpitCustomizer;
+import io.vanillabp.cockpit.cibseven.CibSevenCockpitWiring;
+import io.vanillabp.cockpit.cibseven.CibSevenWorkflowProcesses;
+import io.vanillabp.cockpit.extension.spi.BusinessCockpitBpmsBridge;
+import io.vanillabp.cockpit.extension.spi.BusinessCockpitEventPublisher;
+import io.vanillabp.integration.adapter.migration.config.MigrationAdapterProperties;
+import io.vanillabp.integration.adapter.spi.NameClashAvoidanceSupport;
+import io.vanillabp.integration.adapter.spi.workflowtask.WorkflowTaskWiring;
+import io.vanillabp.integration.extension.spi.ExtensionWiringService;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
+import jakarta.enterprise.inject.Produces;
+import jakarta.inject.Singleton;
+
+/**
+  * Registers the CIB seven half of the Business Cockpit extension on Quarkus. It is the twin of
+  * the Spring Boot module's auto-configuration and does the same things with CDI.
+ * <p>
+ * The producers are <code>&#64;Singleton</code> rather than
+ * <code>&#64;ApplicationScoped</code>: what they produce has no no-argument constructor and is
+ * therefore not client-proxyable.
+ */
+@ApplicationScoped
+public class CibSevenCockpitProducer {
+
+  /**
+   * Quarkus builds the bean to call the producers below. It keeps no state of its
+   * own.
+   */
+  public CibSevenCockpitProducer() {
+
+  }
+
+  /**
+   * Produces the one store of deployed processes of this application.
+   *
+   * @return Which BPMN processes of which workflow modules this application deployed, shared
+   *         by the wiring service filling it and by everything translating an engine's
+   *         identifiers back
+   */
+  @Produces
+  @Singleton
+  @Unremovable
+  public CibSevenWorkflowProcesses businessCockpitCibSevenWorkflowProcesses() {
+
+    return new CibSevenWorkflowProcesses();
+
+  }
+
+  /**
+   * Produces this extension's wiring service.
+   *
+   * @param processes The claimed processes
+   * @param workflowTaskWiring VanillaBP's registry, which answers whether a
+   *          <code>&#64;WorkflowService</code> claims a process
+   * @param publisher The extension, which is told the user tasks of every wired model. It is
+   *          resolved when the first model is wired
+   * @return This extension's place in VanillaBP's deployment pipeline, taken for a workflow
+   *         module which runs on CIB seven and for no other
+   */
+  @Produces
+  @Singleton
+  @Unremovable
+  public ExtensionWiringService<BpmnModelInstance, CibSevenProcessingContext> businessCockpitCibSevenWiringService(
+      final CibSevenWorkflowProcesses processes,
+      final WorkflowTaskWiring workflowTaskWiring,
+      final Instance<BusinessCockpitEventPublisher> publisher) {
+
+    return new CibSevenCockpitWiring(processes, workflowTaskWiring, publisher::get);
+
+  }
+
+  /**
+   * The listeners and the history handler of every CIB seven engine this application builds.
+   *
+   * @param processes The deployed processes
+   * @param scoping VanillaBP's name-clash avoidance
+   * @param engines What the CIB seven adapter knows about each of its engines, one entry per
+   *          configured adapter id. They are asked for when they are first needed rather than
+   *          now: each of them is built from an engine, and an engine is built from this bean
+   * @param publisher Where an observed event is reported. It is resolved on the first event
+   *          rather than now: this bean is asked for while an engine is being built, and the
+   *          extension it would return is built from those engines
+   * @return The customizer
+   */
+  @Produces
+  @Singleton
+  @Unremovable
+  public CibSevenCockpitCustomizer businessCockpitCibSevenEngineCustomizer(
+      final CibSevenWorkflowProcesses processes,
+      final NameClashAvoidanceSupport scoping,
+      final Instance<List<CibSevenEngineFacts>> engines,
+      final Instance<BusinessCockpitEventPublisher> publisher) {
+
+    return new CibSevenCockpitCustomizer(processes, scoping, engines::get, publisher::get);
+
+  }
+
+  /**
+   * One bridge per configured CIB seven adapter id, because during a migration each engine
+   * holds workflows of its own and the cockpit addresses a workflow by the engine holding it.
+   * <p>
+    * They are produced as one list rather than as one bean each. How many there are is decided by
+    * the configuration, which a producer method cannot express. The cockpit's neutral half
+    * collects both shapes, the same way VanillaBP's own Quarkus integration collects the adapter
+    * deployment services of a BPMS adapter.
+   * <p>
+    * WHICH adapter ids those are is {@code MigrationAdapterProperties#adapterIdsOfType}, the same
+    * answer the Spring Boot half reads through the platform's registrar support. Filtering the
+    * configured types is not that answer. An id named in <code>prioritized-adapters</code> needs
+    * no section of its own, and an application which configured nothing at all has the id the
+    * classpath derives. A migration setup and a single-dependency application are therefore
+    * exactly the two cases where an extension answering it itself registers no bridge while the
+    * adapter registers fine.
+   *
+   * @param properties VanillaBP's resolved configuration, which names the configured adapters
+   * @param engines The engines the CIB seven adapter built
+   * @param customizer The customizer, which owns the scope of each engine
+   * @param processes The deployed processes
+   * @return One bridge per configured CIB seven adapter id
+   */
+  @Produces
+  @Singleton
+  @Unremovable
+  public List<BusinessCockpitBpmsBridge> businessCockpitCibSevenBridges(
+      final MigrationAdapterProperties properties,
+      final CibSevenQuarkusEngineRegistry engines,
+      final CibSevenCockpitCustomizer customizer,
+      final CibSevenWorkflowProcesses processes) {
+
+    return properties
+        .adapterIdsOfType(CibSevenAdapter.ADAPTER_TYPE)
+        .stream()
+        .<BusinessCockpitBpmsBridge>map(
+            adapterId -> new CibSevenCockpitBridge(
+                customizer.scopeOf(adapterId), customizer.engineOf(adapterId), processes, customizer
+                    .eventBeingReportedOf(adapterId), engines
+                        .engineFor(adapterId)
+                        .getProcessEngine()))
+        .toList();
+
+  }
+
+}
