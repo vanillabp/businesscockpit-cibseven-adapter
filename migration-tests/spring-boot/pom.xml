@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>io.vanillabp.businesscockpit</groupId>
+    <artifactId>businesscockpit-cibseven-adapter-migration-tests</artifactId>
+    <version>0.9.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>businesscockpit-cibseven-adapter-migration-tests-spring-boot</artifactId>
+  <name>VanillaBP Business Cockpit adapter for CIB seven - Migration tests - Spring Boot</name>
+  <description>This extension next to the Business Cockpit extension for Camunda 7 in one Spring Boot application, the way an application runs while it moves from Camunda 7 to CIB seven.</description>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>VanillaBP</id>
+      <organization>Phactum Softwareentwicklung GmbH</organization>
+      <organizationUrl>https://www.phactum.at</organizationUrl>
+    </developer>
+  </developers>
+
+  <properties>
+    <!-- no coverage: the module 'spring-boot' already runs the code of this extension, and the
+         Camunda 7 extension is not ours to measure. The empty agent keeps Surefire's inherited
+         '@{jacoco.agent}' resolvable. See decision 5 in the repository's DECISIONS.md. -->
+    <jacoco.skip>true</jacoco.skip>
+    <jacoco.agent/>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>businesscockpit-cibseven-adapter-spring-boot</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>cibseven-adapter-spring-boot</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- the Business Cockpit extension for Camunda 7 and its adapter, which the test runs
+         next to this extension. Camunda 7.24 and CIB seven 2.2 bring the same FEEL engine, so
+         nothing has to be excluded -->
+    <dependency>
+      <groupId>io.vanillabp.businesscockpit</groupId>
+      <artifactId>businesscockpit-camunda7-adapter-spring-boot</artifactId>
+      <version>${camunda7-extension.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.camunda.community.vanillabp</groupId>
+      <artifactId>camunda7-adapter-spring-boot</artifactId>
+      <version>${camunda7-adapter.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vanillabp</groupId>
+      <artifactId>test-utils</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <!-- the cockpit server the test reports to -->
+      <groupId>io.vanillabp.businesscockpit</groupId>
+      <artifactId>extensions-commons-test-support</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+</project>

@@ -1,0 +1,153 @@
+name: Sync from the Camunda 7 extension
+# The code of this repository is made from the Business Cockpit extension for Camunda 7
+# (decision 3 in the repository's DECISIONS.md). Nobody remembers to run the sync by hand. So
+# this runs it every night against main of the Camunda 7 extension, and on demand against any
+# commit or tag.
+#
+# When the result differs from what the branch 'generated' holds, the workflow pushes the new
+# commit to 'generated', merges it into a branch from main, builds that branch and opens a pull
+# request into main. The pull request says whether the merge had conflicts and whether the build
+# was green. What the sync cannot see, a new Camunda name in a string for instance, is still
+# work for a person, see "Following the Camunda 7 extension" in CONTRIBUTING.md.
+#
+# The CI of the Camunda 7 extension knows nothing of this repository, and it should not: a red
+# sync here must never hold up a change there.
+"on":
+  schedule:
+    # after the nightly build of this repository (01:59 UTC) and the chain check of
+    # business-cockpit (02:13 UTC), and not at the minute of the sync of the CIB seven adapter
+    # (03:47 UTC), so the runners of the nights do not overlap
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+    inputs:
+      camunda7-ref:
+        description: The commit or tag of the Camunda 7 extension to make the code from. Empty means main.
+        required: false
+        default: ""
+permissions:
+  contents: read
+concurrency:
+  # Two syncs at the same time would both push to 'generated'. The build of a sync publishes
+  # nothing, so it does not need the group of the publish of main.
+  group: businesscockpit-cibseven-adapter-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # the whole history, so the script finds the branch 'generated' and the merge into main
+      # finds the common ancestor
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # A pull request which the workflow token opens starts no workflow, so it would get no
+          # checks. A token of a person, in the secret SYNC_TOKEN, avoids that. Without the
+          # secret the workflow token is used, and a maintainer starts the checks by hand.
+          token: "${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}"
+      # the Maven the other workflows use, see publish-snapshots.yaml for why it is not the 3.10
+      # of the runner image
+      - name: Use Maven 3.9
+        run: |
+          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.9.16/binaries/apache-maven-3.9.16-bin.tar.gz \
+            | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+      - uses: actions/setup-java@v6
+        with:
+          java-version: 25.0.5+8.0.LTS
+          distribution: temurin
+          cache: maven
+      - name: Make the code again from the Camunda 7 extension
+        id: sync
+        env:
+          REQUESTED: "${{ github.event.inputs.camunda7-ref }}"
+          # the recipe resolves the dependencies of the Camunda 7 extension, and one of them is
+          # the Camunda 7 adapter in the GitHub Packages registry of the Camunda Community Hub
+          MAVEN_ARGS: "-s ${{ github.workspace }}/.github/workflows/github-packages-settings.xml"
+          USER_NAME: "${{ secrets.VANILLABP_USER_NAME }}"
+          USER_TOKEN: "${{ secrets.VANILLABP_USER_TOKEN }}"
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          before=$(git rev-parse --verify --quiet refs/remotes/origin/generated || true)
+          bin/sync-from-camunda7.sh "${REQUESTED:-main}" | tee "${RUNNER_TEMP}/sync.log"
+          after=$(git rev-parse --verify --quiet refs/heads/generated)
+          if [ "$before" = "$after" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "'generated' already holds what the Camunda 7 extension gives." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          c7_sha=$(git log -1 --format=%s generated | sed -n 's/^generated from BC C7 //p')
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "c7-sha=${c7_sha}" >> "$GITHUB_OUTPUT"
+          echo "branch=sync/bc-c7-${c7_sha:0:8}" >> "$GITHUB_OUTPUT"
+      - name: Push 'generated' and merge it into a branch from main
+        id: merge
+        if: "${{ steps.sync.outputs.changed == 'true' }}"
+        env:
+          BRANCH: "${{ steps.sync.outputs.branch }}"
+        run: |
+          set -euo pipefail
+          git push origin generated
+          git switch -c "$BRANCH" origin/main
+          if git merge --no-ff --no-edit generated; then
+            echo "conflicts=false" >> "$GITHUB_OUTPUT"
+            git push origin "$BRANCH"
+          else
+            # the conflicts are for a person to solve, on the branch 'generated' itself
+            git merge --abort
+            echo "conflicts=true" >> "$GITHUB_OUTPUT"
+          fi
+      # the build of a pull request, so the pull request says whether the merge is green even
+      # where no check runs on it
+      - name: Build and test the merge
+        id: build
+        if: "${{ steps.merge.outputs.conflicts == 'false' }}"
+        continue-on-error: true
+        run: mvn -s $GITHUB_WORKSPACE/.github/workflows/github-packages-settings.xml
+          --batch-mode --no-transfer-progress --update-snapshots install
+        env:
+          USER_NAME: "${{ secrets.VANILLABP_USER_NAME }}"
+          USER_TOKEN: "${{ secrets.VANILLABP_USER_TOKEN }}"
+      - name: Open the pull request
+        if: "${{ steps.sync.outputs.changed == 'true' }}"
+        env:
+          GH_TOKEN: "${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}"
+          C7_SHA: "${{ steps.sync.outputs.c7-sha }}"
+          BRANCH: "${{ steps.sync.outputs.branch }}"
+          CONFLICTS: "${{ steps.merge.outputs.conflicts }}"
+          BUILD: "${{ steps.build.outcome }}"
+          RUN_URL: "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        run: |
+          set -euo pipefail
+          head=$BRANCH
+          if [ "$CONFLICTS" = "true" ]; then
+            head=generated
+          fi
+          if [ -n "$(gh pr list --state open --head "$head" --json number --jq '.[].number')" ]; then
+            echo "A pull request from '$head' is open already."
+            exit 0
+          fi
+          {
+            echo "The code made again from the Business Cockpit extension for Camunda 7 at"
+            echo "vanillabp/businesscockpit-camunda7-adapter@${C7_SHA}."
+            echo
+            if [ "$CONFLICTS" = "true" ]; then
+              echo "The merge into \`main\` has conflicts, so this pull request comes from \`generated\`"
+              echo "itself. Merge \`main\` into a branch of \`generated\` and solve them there."
+            else
+              echo "The merge into \`main\` had no conflicts. The build of the merge was: **${BUILD}**."
+            fi
+            echo
+            echo "Before the merge, follow steps 1 and 3 of \"Following the Camunda 7 extension\" in"
+            echo "CONTRIBUTING.md: read the new decisions, search the diff, compare the test counts."
+            echo "Merge with a merge commit, not a squash."
+            echo
+            echo "Run: $RUN_URL"
+          } > "${RUNNER_TEMP}/body.md"
+          gh pr create --base main --head "$head" \
+            --title "Sync from the Camunda 7 extension at ${C7_SHA:0:8}" \
+            --body-file "${RUNNER_TEMP}/body.md"

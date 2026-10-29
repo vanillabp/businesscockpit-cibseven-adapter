@@ -1,0 +1,39 @@
+quarkus:
+  datasource:
+    db-kind: h2
+    jdbc:
+      url: jdbc:h2:mem:cockpit-migration-c7;DB_CLOSE_DELAY=-1
+      transactions: xa
+    cs:
+      db-kind: h2
+      jdbc:
+        url: jdbc:h2:mem:cockpit-migration-cs;DB_CLOSE_DELAY=-1
+        transactions: xa
+vanillabp:
+  outbox:
+    poll-interval: PT0.2S
+    attempt-frequency: PT0.2S
+  adapters:
+    c7:
+      type: camunda7
+      data-source-name: default
+    cs:
+      type: cibseven
+      data-source-name: cs
+  prioritized-adapters:
+    - cs
+    - c7
+  workflow-modules:
+    migration:
+      adapters:
+        c7:
+          resources-location: classpath:migration/processes
+        cs:
+          resources-location: classpath:migration/processes
+      cockpit:
+        workflow-module-uri: http://localhost:8081/migration
+        ui-uri-type: WEBPACK_MF_REACT
+        ui-uri-path: /remoteEntry.js
+        i18n-languages: en
+        bpmn-description-language: en
+        initiator-source: system
